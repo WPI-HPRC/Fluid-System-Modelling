@@ -10,8 +10,9 @@ def orifice_incompressible(mdot,density,cd,A):
     dP = density*(mdot/(density*cd*A))**2
     return dP
 
-def orifice_compressible_chocked():
-    return
+def orifice_compressible_chocked(mdot,density,gamma,cd,A):
+    P_up = (1/gamma*density)*((mdot/(cd*A))**2)*(2/(gamma+1))**((gamma+1)/(gamma-1))
+    return P_up
 
 def orifice_compressible_unchoked():
     return
@@ -24,14 +25,25 @@ def area2dia(area):
     dia = (4*area/np.pi)**0.5
     return dia
 
+
 # desire properties of injector
 p_injector = 300 *6894.76 # 300 psi in Pa
 mdot_injector = 3 * 0.453592 # 3 lbm/s in kg/s
 burntime = 5 #seconds
 
+
+
 # mechanical properties of water
 density_water = 1000 # kg/m^3
 viscosity_water = 1e-6 #dynamic viscosity of water in [Pa*s] @20C
+
+# mechanical properties of nitrogen
+density_nitrogen = 1.19 # kg/m^3
+gamma_nitrogen = 1.4
+
+
+vdot_injector = mdot_injector/density_water #volumetric flow rate
+
 
 # tank properties
 water_fill_volume = mdot_injector*burntime/density_water
@@ -97,9 +109,22 @@ for x in range(component_type.size):
     print(0.000145038*dP[x])
     P[x+1] = P[x] + dP[x]
        
-        
+     
+     
+     
+
+   
 P_imperial = P*0.000145038
 print(dP)
 print(P_imperial)
 
 hi = 2 
+diameter_nitrogen = 0.1*.00254
+area_nitrogen = dia2area(diameter_nitrogen)
+orificechockpressureup = orifice_compressible_chocked(mdot_injector,density_nitrogen,gamma_nitrogen,0.7,area_nitrogen)
+criticalpressure = orificechockpressureup*(2/(gamma_nitrogen+1))**(gamma_nitrogen/(gamma_nitrogen-1))
+criticalpressureratio = criticalpressure/orificechockpressureup
+print(orificechockpressureup*0.000145038)
+# print(criticalpressure)
+# print(criticalpressureratio)
+
