@@ -8,24 +8,70 @@
 import numpy as arr
 import math
 
-#Assumptions
+#Assumptions && Extra Info that I am too lazy to get rid of/check claims of
 
-# Goal -- Final PSI should be 300
+# Goal -- Final PSI should be 550
 # Cd = .6
 # beta ~ 0.0   -->  C = Cd                      (beta = actual diameter / theoretical dimeter)
 # Q* = Mdot / rho                               (QSTAR = mass flow / density)
 # We finding delta P                            (same as p2 - p1)
 # Qm = rho * Qv
-# Can ignore G bc we using water (1)            (included as variable since this may change much lateer)
+# Can ignore G bc we using water (1)            (included as variable since this may change much later)
 # A is cross-sectional Area
-# Mdot = 3 lbm/s for now                        (was given this value by leadership)
+# Mdot = 3 lbm/s for now                        (target mass flow rate for rocket)
+
+## Formulas
+
+# deltaP = [ (QSTAR * sqrt(G) ) /Cv ]^2        # sqrt(G) is 1 since we are modeling water (if it were something else then it would matter)
+# (FINAL_PSI - initial_PSI) = [ (QSTAR * sqrt(G) ) /Cv ]^2
+# initial_PSI = FINAL_PSI - [ (QSTAR * sqrt(G) ) /Cv ]^2
+
+# C = CD / math.sqrt( 1 - ( Beta**4 ) )
+
+# Qv = C * A * math.sqrt( ( 2 (Delta_P--------------) ) / DENSITY)
+# Qm = Qv * DENSITY
+
+
+## really need to convert to SI units for equations (ratios are above)
 
 
 
 
-##  ------------- Incompressible Flow Modeling -------------
 
-## Constants
+
+
+
+
+
+
+
+## ------------- Most Important Information You Will Ever See -------------
+# Arrays for values to make equations work (all the arrays must be the same length) (this is what changes pressures)
+
+# These are the only variables you will have to change (unless you use different stuff going through the pipes)
+
+valveCValues = arr.array([0.6, 1.15, 1.38, 0.6])                 # how pressure is changing
+
+typeHole = arr.array(["Orifice", "Valve", "Valve", "Valve"])         # what is changing the prssure
+
+holeArea = arr.array([7.0, 9.0, 10.0, 0.005])                      # size of hole
+
+resultsOfPSI = arr.zeros(4)                                 # what PSI was before typeHole
+
+CompressOrIncompress = arr.array(["Incompressible", "Incompressible", "Incompressible", "Compressible"])
+
+
+
+
+
+
+
+
+
+
+
+
+##  ------------- Constants (As defined by water and nitrogen) -------------
 
 # Ratios
 PSI_TO_PA = 6894.76
@@ -50,41 +96,24 @@ MDOT = 2.5 * LBS_TO_KGS #Mdot stands for mass flow #lbs/sec (multiplied by LBS_T
 MDOT_N2 = 0.1 * LBS_TO_KGS
 QSTAR = (MDOT / DENSITY) #gallons per second   # flow rate is equal to mass flow/density
 G_VAR = 1 # Since we are modeling water, it is 1 (Specific gravity of fluid)
-CD = 0.6
+CD = 0.6        #orifice coefficient to show how good it is at flwoing (this value is only for the very final orifice since the other orifices will be different)
 GAMMA = 1.4
 How_TANK_FILLS_WATER = (MDOT * BURNTIME) / DENSITY
 NEWTON_RAPHSON_DELTA_X = 0.001
-
-
-## Variables (all the arrays must be the same length)
-
-valveCValues = arr.array([0.6, 1.15, 1.38, 0.6])                 # how pressure is changing
-
-typeHole = arr.array(["Orifice", "Valve", "Valve", "Valve"])         # what is changing the prssure
-
-holeArea = arr.array([7.0, 9.0, 10.0, 0.005])                      # size of hole
-
-resultsOfPSI = arr.zeros(4)                                 # what PSI was before typeHole
-
 Beta = 0                                                    # important if system did not have a beta which is 0 (we going too slow)
 
-CompressOrIncompress = arr.array(["Incompressible", "Incompressible", "Incompressible", "Compressible"])
 
 
 
-## Formulas
-
-# deltaP = [ (QSTAR * sqrt(G) ) /Cv ]^2        # sqrt(G) is 1 since we are modeling water (if it were something else then it would matter)
-# (FINAL_PSI - initial_PSI) = [ (QSTAR * sqrt(G) ) /Cv ]^2
-# initial_PSI = FINAL_PSI - [ (QSTAR * sqrt(G) ) /Cv ]^2
-
-# C = CD / math.sqrt( 1 - ( Beta**4 ) )
-
-# Qv = C * A * math.sqrt( ( 2 (Delta_P--------------) ) / DENSITY)
-# Qm = Qv * DENSITY
 
 
-## really need to convert to SI units for equations (ratios are above)
+
+
+
+
+
+
+##  ------------- Incompressible Flow Modeling -------------
 
 def calculatePsi_incompressible(final_psi, holeName, count):
     cVar = valveCValues[count]
@@ -106,7 +135,15 @@ def calculatePsi_incompressible(final_psi, holeName, count):
     else:
         count = -2
         return count
-    
+
+
+
+
+
+
+
+
+
 
 
 
@@ -149,16 +186,22 @@ def funcForNewtRaphMethod(p2, count):    #this method actually uses the Newton-R
             return pressureOne_New
         pressureOne_Old = pressureOne_New
         loopCount = loopCount + 1
-        
 
 
 
 
 
 
-##  ------------- Math Numbers For Everything (Delta PSI Contrl Room) -------------
 
-# how this works
+
+
+
+
+
+##  ------------- Math For Everything (Delta PSI Control Room) -------------
+
+# This is where all the output is displayed/Correct Algorithm is Used
+
 counter = -1
 #resultsOfPSI[0] = 300
 endPsi = 300
