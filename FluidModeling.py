@@ -50,15 +50,15 @@ import math
 
 # These are the only variables you will have to change (unless you use different stuff going through the pipes)
 
-valveCValues = arr.array([0.6, 1.15, 1.38, 0.6])                 # how pressure is changing
+valveCValues = arr.array([0.6, 1.15, 1.38, 0.6, 0.6])                 # how pressure is changing
 
-typeHole = arr.array(["Orifice", "Valve", "Valve", "Valve"])         # what is changing the prssure
+typeHole = arr.array(["Orifice", "Valve", "Valve", "Valve", "Orifice"])         # what is changing the prssure
 
-holeArea = arr.array([7.0, 9.0, 10.0, 0.005])                      # size of hole
+holeArea = arr.array([7.0, 9.0, 10.0, 0.005, 0.1])                      # size of hole (in inches)
 
-resultsOfPSI = arr.zeros(4)                                 # what PSI was before typeHole
+resultsOfPSI = arr.zeros(5)                                 # what PSI was before typeHole
 
-CompressOrIncompress = arr.array(["Incompressible", "Incompressible", "Incompressible", "Compressible"])
+CompressOrIncompress = arr.array(["Incompressible", "Incompressible", "Incompressible", "Compressible", "Compressible"])
 
 
 
@@ -101,6 +101,34 @@ GAMMA = 1.4
 How_TANK_FILLS_WATER = (MDOT * BURNTIME) / DENSITY
 NEWTON_RAPHSON_DELTA_X = 0.001
 Beta = 0                                                    # important if system did not have a beta which is 0 (we going too slow)
+WATERPIPE = 0.25 * IN_TO_M
+N2PIPE = 1 * IN_TO_M
+UNIV_GAS_CONST = 8.31446261815324
+TEMPERATURE = 298 #in Degrees Kelvin (aound room temp)
+N2_MOLAR_MASS = (28.02 / 1000) #g/mol * g-to-kg conversion number
+
+
+
+
+
+
+
+
+
+
+
+
+
+def isChoked(holeSize):
+    shrinkRatio = holeSize / N2PIPE
+    funnyMathChunk = ( 1 + ( (GAMMA - 1) / 2) )
+    chokeMath1 = ( (N2PIPE * N2_DENSITY) / MDOT_N2 )
+    chokeMath2 = ( (GAMMA * UNIV_GAS_CONST * TEMPERATURE) / (N2_MOLAR_MASS * funnyMathChunk ) )**0.5
+    chokeMath3 = ( MDOT_N2 / (N2PIPE * N2_DENSITY) )**2 * ( (N2_MOLAR_MASS * funnyMathChunk) / (GAMMA * UNIV_GAS_CONST * TEMPERATURE) )
+    chokeMath4 = ( 2 / (GAMMA + 1) ) * ( 1 + ( (funnyMathChunk - 1) * chokeMath3 ) )
+    chokeMath5 = ( (GAMMA + 1) / ( 2 * (GAMMA - 1) ) )
+    allMaths = chokeMath1 * chokeMath2 * (chokeMath4)**chokeMath5
+    return shrinkRatio > allMaths
 
 
 
@@ -151,17 +179,23 @@ def calculatePsi_incompressible(final_psi, holeName, count):
 
 def calculatePsi_compressible(final_psi, holeName, count):     #would love to have a do-while loop here but it seems python does not have this
     
-    if str(holeName) == "Orifice":
+    notChoked = True
+    if str(holeName) == "Valve":
         #only place where fluids can choke (check if choked flow here somewhere)
-        print("you should not be here as this is not done")
-    elif str(holeName) == "Valve":
+        notChoked = True
+    else:
+        #do math to calculate if choked and then set boolean
+        notChoked = isChoked(holeArea[count])
+        
+    if notChoked:
+        print("Choked?: " + str(not notChoked))
         #We are using the equation "Compressible Flow (Unchoked)" for this part of the simulation
         #upstream flow is p2 for eq so I am finding p2 (since I am working backwards)
         #Using the Newton Raphson Method to obtain a very close-to-actual value for p2
         resultsOfPSI[count] = funcForNewtRaphMethod(final_psi, count)
     else:
-        count = -2
-        return count
+        resultsOfPSI[count] = funcForChoked(count)#solve for qm here
+        #Compressible Flow (Choked) Equation
     return (count + 1)
 
 
@@ -188,7 +222,20 @@ def funcForNewtRaphMethod(p2, count):    #this method actually uses the Newton-R
         loopCount = loopCount + 1
 
 
-
+def funcForChoked(count):
+    cVar = valveCValues[count]
+    hArea = holeArea[count]
+    p1 = resultsOfPSI[count - 1]
+    equationPart2 = (2 / (GAMMA + 1) )**( (GAMMA + 1) / (GAMMA - 1) )
+    pressureApprox = cVar * hArea * (GAMMA * N2_DENSITY * p1 * equationPart2)**0.5
+    return pressureApprox #is currently in mass flow rate (mDot but we want upstream pressure)
+# ---------------------------------------------------------------------------------------------------------------------------------------------
+# ---------------------------------------------------------------------------------------------------------------------------------------------
+# ---------------------------------------------------------------------------------------------------------------------------------------------
+# ---------------------------------------------------------------------------------------------------------------------------------------------
+# ---------------------------------------------------------------------------------------------------------------------------------------------
+# ---------------------------------------------------------------------------------------------------------------------------------------------
+# ---------------------------------------------------------------------------------------------------------------------------------------------
 
 
 
@@ -204,7 +251,7 @@ def funcForNewtRaphMethod(p2, count):    #this method actually uses the Newton-R
 
 counter = -1
 #resultsOfPSI[0] = 300
-endPsi = 300
+endPsi = 550
 
 for x in typeHole:
     if counter == -2:
@@ -224,12 +271,14 @@ for x in typeHole:
             counter = calculatePsi_compressible(resultsOfPSI[counter-1], x, counter)
 
 
+#Display Results in a Cohesive Manner
+
 counter2 = 0
 print("\n")
 print("Position\tPressure Value\t\tMedium Type\n")
 print("Start:\t\t550")
 for lcv in typeHole:
-    print(counter2)
+    #print(counter2)
     print(lcv + " : \t" + str(resultsOfPSI[counter2]) + "\t" + CompressOrIncompress[counter2])
     counter2 += 1
 
